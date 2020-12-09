@@ -1,0 +1,54 @@
+//@Library('jenkins-share-library@v1.0.1') _
+
+def gitCommit = null
+def gitBranch = null
+def imageTag = null
+def podLabel = "podWorker-${UUID.randomUUID().toString()}"
+def project = 'app-bff'
+def namespace = 'dev'
+def currentEnv = 'dev'
+def imageRepoUrl = 'https://752535683739.dkr.ecr.cn-northwest-1.amazonaws.com.cn/dev-repository'
+def credentials = 'ecr:cn-northwest-1:95189c1e-6db8-4c81-8e93-3e303e665433'
+def mailRecipients="peichao.dong@thoughtworks.com;xqi@thoughtworks.com"
+
+
+pipeline {
+  agent {
+    kubernetes {
+      cloud 'kubernetes'
+      label "${podLabel}"
+      yamlFile 'kubernetes/kubernetesPod.yaml'
+    }
+  }
+  options {
+    skipDefaultCheckout()
+  }
+  stages {
+    stage('Build & Deploy') {
+      steps {
+        script {
+          stage('Checkout Code') {
+            checkout scm
+          }
+          container('maven') {
+            stage('Test') {
+              sh "mvn clean test"
+            }
+          }
+        }
+      }
+    }
+  }
+  post {
+        failure {
+            echo 'This will run only if failed'
+            emailext( body: '''${SCRIPT, template="groovy-html.template"}''',
+                mimeType: 'text/html',
+                subject: "[Jenkins]${currentBuild.fullDisplayName}",
+                to: "${mailRecipients}",
+                replyTo: "${mailRecipients}",
+                recipientProviders: [[$class: 'CulpritsRecipientProvider'],[$class: 'DevelopersRecipientProvider']]
+            )
+        }
+    }
+}
