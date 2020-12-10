@@ -7,7 +7,7 @@ spec:
     runAsUser: 0
   containers:
       - name: maven
-        image: maven:3.6.3
+        image: maven:latest
         imagePullPolicy: "IfNotPresent"
         command:
           - cat
